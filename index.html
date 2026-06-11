@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"/>
 <script>
   (function() {
     var theme = 'dark';
@@ -24,8 +24,10 @@
 <meta property="og:title" content="Old Cassette — THEM?!CTF 2026 Writeup" />
 <meta property="og:description" content="A detailed reverse-engineering writeup featuring a CHIP-8 VM, PRNG cycle detection, and cryptographic analysis." />
 <meta property="og:url" content="https://advaybagaria.github.io/old_cassette_/" />
-<meta property="og:site_name" content="Old Cassette Writeup" />
-<meta name="twitter:card" content="summary" />
+ <meta property="og:image" content="https://advaybagaria.github.io/old_cassette_/og-image.png" />
+ <meta property="og:site_name" content="Old Cassette Writeup" />
+ <meta name="twitter:card" content="summary_large_image" />
+ <meta name="twitter:image" content="https://advaybagaria.github.io/old_cassette_/og-image.png" />
 <meta name="twitter:title" content="Old Cassette — THEM?!CTF 2026 Writeup" />
 <meta name="twitter:description" content="A detailed reverse-engineering writeup featuring a CHIP-8 VM, PRNG cycle detection, and cryptographic analysis." />
 <meta name="theme-color" content="#00ff41" />
@@ -127,11 +129,13 @@ strong { color: var(--phosphor-amber); font-weight: normal; }
 em { color: var(--phosphor-teal); font-style: normal; }
 
 code.ic {
-  background: rgba(0,255,65,0.1);
-  padding: 2px 6px;
-  color: var(--phosphor-teal);
-  border: 1px solid var(--phosphor-teal);
-}
+   background: rgba(0,255,65,0.1);
+   padding: 2px 6px;
+   color: var(--phosphor-teal);
+   border: 1px solid var(--phosphor-teal);
+ }
+ .hex-amber { color: var(--phosphor-amber); }
+ .prng-step-text { color: var(--phosphor-teal); }
 pre {
   background: rgba(0,255,65,0.05);
   border: 1px solid var(--phosphor-green-dim);
@@ -150,6 +154,7 @@ pre {
   margin-bottom: 60px;
 }
 .boot-text { margin: 0; padding: 0; line-height: 1.2; opacity: 0; }
+.boot-text--amber { color: var(--phosphor-amber); }
 .hero-title {
   font-size: clamp(60px, 10vw, 120px);
   color: var(--phosphor-amber);
@@ -193,6 +198,12 @@ pre {
 .memmap { display: flex; gap: 4px; margin-top: 20px; height: 40px; }
 .mem-segment { height: 100%; cursor: pointer; position: relative; transition: opacity 0.2s; opacity: 0.8; }
 .mem-segment:hover { opacity: 1; box-shadow: 0 0 10px currentColor; }
+.mem-segment:focus-visible { opacity: 1; outline: 2px solid var(--phosphor-green); outline-offset: 2px; }
+.mem-segment--entry { flex: 1; background: var(--phosphor-amber-dim); border: 1px solid var(--phosphor-amber); }
+.mem-segment--outer-loop { flex: 2; background: rgba(255, 51, 51, 0.3); border: 1px solid var(--phosphor-red); }
+.mem-segment--prng { flex: 1; background: var(--phosphor-teal); opacity: 0.5; }
+.mem-segment--sprite { flex: 4; background: rgba(0, 255, 65, 0.3); border: 1px solid var(--phosphor-green); }
+.mem-segment--draw { flex: 3; background: rgba(150, 0, 255, 0.3); border: 1px solid #90f; }
 .mem-info { border: 1px solid var(--phosphor-green-dim); padding: 15px; margin-top: 10px; min-height: 100px; }
 
 /* PRNG Visualizer */
@@ -209,6 +220,9 @@ pre {
 .timer-panel.fast .timer-value { color: var(--phosphor-teal); }
 .progress-track { height: 10px; background: #111; border: 1px solid #333; width: 100%; }
 .progress-fill { height: 100%; background: currentColor; width: 0%; }
+.progress-fill--red { color: var(--phosphor-red); }
+.progress-fill--teal { color: var(--phosphor-teal); }
+.race-controls { margin-top: 15px; }
 
 /* XOR Demo */
 .xor-row { display: flex; align-items: center; gap: 15px; margin-bottom: 10px; font-family: var(--font-mono); font-size: 16px;}
@@ -220,26 +234,27 @@ pre {
 
 /* Disassembly Tabs */
 .tabs { display: flex; gap: 5px; border-bottom: 1px solid var(--phosphor-green-dim); margin-bottom: 15px; }
-.tab { padding: 5px 15px; cursor: pointer; color: #888; }
+.tab { padding: 5px 15px; cursor: pointer; color: #aaa; }
 .tab.active { color: var(--phosphor-green); border: 1px solid var(--phosphor-green-dim); border-bottom: none; background: rgba(0,255,65,0.05); }
 .disasm-line { display: flex; gap: 15px; padding: 2px 5px; }
 .disasm-line:hover { background: rgba(0,255,65,0.1); }
 .d-addr { color: var(--phosphor-amber); width: 60px; }
 .d-op { color: var(--phosphor-green); width: 80px; }
 .d-arg { color: var(--phosphor-teal); width: 100px; }
-.d-com { color: #999; }
+.d-com { color: #aaa; }
 
 /* Cycle Diagram */
-.cy-node { width: 30px; height: 30px; border-radius: 50%; border: 1px solid #444; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #888; }
+.cy-node { width: 30px; height: 30px; border-radius: 50%; border: 1px solid #444; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #aaa; }
 .cy-node.active { background: var(--phosphor-teal); color: #000; box-shadow: 0 0 10px var(--phosphor-teal); border-color: var(--phosphor-teal); }
 .cy-node.loop { border-color: var(--phosphor-amber); color: var(--phosphor-amber); }
 
 /* Flag Reveal */
-.flag-slots { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; margin: 40px 0; }
-.flag-slot { width: 24px; height: 36px; border: 1px solid #333; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 20px; background: #050505; transition: all 0.2s; }
+.flag-slots { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin: 40px 0; align-items: center; }
+.flag-slot { width: 28px; height: 36px; border: 1px solid #333; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 18px; background: #050505; transition: all 0.2s; border-radius: 6px; min-width: 28px; }
 .flag-slot.scrambled { color: var(--phosphor-red); text-shadow: 0 0 5px var(--phosphor-red); }
 .flag-slot.resolving { color: var(--phosphor-amber); text-shadow: 0 0 5px var(--phosphor-amber); border-color: var(--phosphor-amber); }
 .flag-slot.locked { color: var(--phosphor-green); text-shadow: var(--glow-green); border-color: var(--phosphor-green); box-shadow: inset 0 0 10px rgba(0,255,65,0.2); }
+.flag-caption { color:#aaa; }
 
 /* Rabbit Holes & Deep Dives */
 .rabbit-hole { border: 1px solid var(--phosphor-red); background: rgba(255,0,0,0.05); margin: 20px 0; cursor: pointer; transition: all 0.2s; }
@@ -261,8 +276,14 @@ pre {
 /* Timeline */
 .tl-node { min-width: 150px; border-top: 2px solid var(--phosphor-green-dim); padding-top: 15px; position: relative; }
 .tl-node::before { content: ''; position: absolute; top: -6px; left: 0; width: 10px; height: 10px; background: var(--bg-color); border: 2px solid var(--phosphor-green); border-radius: 50%; }
-.tl-time { color: #999; font-size: 14px; }
+.tl-time { color: #aaa; font-size: 14px; }
 .tl-title { color: var(--phosphor-amber); }
+
+/* Inline style replacements */
+.section--spaced { margin-top: 60px; }
+.section--footer { padding-top: 20px; border-top: 1px dashed var(--phosphor-green-dim); text-align: center; }
+.download-links { display: flex; flex-wrap: wrap; gap: 10px; }
+.hero-meta p { margin: 0; }
 
 /* Animations */
 @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
@@ -274,7 +295,9 @@ pre {
   80% { transform: translate(1px, -2px) }
   100% { transform: translate(0) }
 }
-.glitch-hover:hover { animation: glitch 0.2s infinite; color: var(--phosphor-red); text-shadow: 2px 0 var(--phosphor-teal), -2px 0 var(--phosphor-amber); }
+.glitch-hover:hover,
+.glitch-hover:focus-visible { animation: glitch 0.2s infinite; color: var(--phosphor-red); text-shadow: 2px 0 var(--phosphor-teal), -2px 0 var(--phosphor-amber); }
+.mem-segment:focus-visible { opacity: 1; outline: 2px solid var(--phosphor-green); outline-offset: 2px; }
 
 /* Skip Link */
 .skip-link {
@@ -366,6 +389,7 @@ pre {
 .toc a { border: none; display: flex; align-items: center; gap: 10px; }
 .toc a::before { content: '>'; color: var(--phosphor-green-dim); }
 .toc a:hover::before { color: var(--phosphor-green); animation: blink 1s infinite; }
+.toc-title { color: var(--phosphor-amber); margin-bottom: 10px; }
 
 @media (max-width: 768px) {
   .emu-container { flex-direction: column; }
@@ -508,18 +532,7 @@ button.dd-header:focus-visible,
   border-color: var(--phosphor-amber);
 }
 
-/* Flag widget fixes */
-.flag-slots {
-  gap: 6px;
-  align-items: center;
-}
-.flag-slot {
-  width: 28px;
-  min-width: 28px;
-  font-size: 18px;
-  border-radius: 6px;
-}
-.flag-caption { color:#888; }
+.flag-caption { color:#aaa; }
 .flag-copy-host {
   display: flex;
   justify-content: center;
@@ -555,11 +568,10 @@ html[data-theme="light"] {
   --scanline-color: rgba(0, 0, 0, 0.04);
 }
 
-html[data-theme="light"] body,
-html[data-theme="light"] html {
-  background: var(--bg-color);
-  color: var(--text-main);
-}
+html[data-theme="light"] body {
+   background: var(--bg-color);
+   color: var(--text-main);
+ }
 
 html[data-theme="light"] .crt-overlay,
 html[data-theme="light"] #noiseCanvas {
@@ -760,15 +772,30 @@ html[data-theme="light"] .toolbar-btn[href^="https://"] {
 }
 
 </style>
-</head>
-<body>
+ <noscript>
+ <style>
+ .reveal-on-scroll { opacity: 1 !important; transform: none !important; }
+ .hero-title, .hero-meta { opacity: 1 !important; display: block !important; }
+ .dd-content, .rabbit-content { display: block !important; }
+ .boot-text { opacity: 1 !important; display: block !important; }
+ </style>
+ <div style="padding: 40px 20px; max-width: 900px; margin: 0 auto;">
+ <h1 style="color: #ffb000; margin-bottom: 20px;">OLD CASSETTE</h1>
+ <h2 style="color: #00e5ff; margin-bottom: 30px;">THEM?!CTF 2026 | REV | 100 PTS</h2>
+ <p style="color: #ffb000; margin: 10px 0;">AUTHOR: SISUBENY | WRITEUP: OPTIMUS_PRIME</p>
+ <h3 style="color: #00ff41; margin-top: 40px;">Flag</h3>
+ <pre style="background: rgba(0,255,65,0.05); border: 1px solid #00ff41; padding: 15px;">THEM?!CTF{0LD_T4P3_N3V3R_D1E5K7}</pre>
+ </div>
+ </noscript>
+ </head>
+ <body>
 <a href="#animated-view" id="skip-link" class="skip-link">Skip to content</a>
 <!-- CRT Overlays -->
 <div class="crt-overlay scanlines"></div>
 <div class="crt-overlay vignette"></div>
-<canvas id="noiseCanvas"></canvas>
+<canvas id="noiseCanvas" aria-hidden="true"></canvas>
 <!-- Reading Progress Bar -->
-<div id="reading-progress-container">
+<div id="reading-progress-container" role="progressbar" aria-label="Reading progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
 <div id="reading-progress-bar"></div>
 </div><div aria-label="Writeup controls" id="top-toolbar" role="navigation"><a class="toolbar-btn" download href="./Old_Cassette_Writeup_.pdf" id="pdf-download">↓ PDF</a><a class="toolbar-btn" download href="./main.bin" id="bin-download">↓ BIN</a><a class="toolbar-btn" download href="./solve.py" id="solver-download">↓ SOLVER</a><a class="toolbar-btn" href="https://ctf.themctf.com/challenges?categories=sanity%2Cmisc%2Crev%2Cpwn%2Cforensics%2Cweb%2Ccrypto%2Cosint%2Cweb3#Old%20Cassette-6" id="challenge-link" rel="noopener noreferrer" target="_blank">↗ CHALLENGE</a><button class="toolbar-btn toggle-btn" id="theme-toggle" type="button" aria-label="Toggle color theme">Switch to Light Mode</button></div>
 <main aria-label="Animated writeup view" class="container animated-view" id="animated-view" tabindex="-1">
@@ -776,17 +803,17 @@ html[data-theme="light"] .toolbar-btn[href^="https://"] {
 <header id="boot-sequence">
 <p class="boot-text">CHIP-8 SYSTEM v1.0</p>
 <p class="boot-text">RAM CHECK... 4096 BYTES OK</p>
-<p class="boot-text" style="color:var(--phosphor-amber)">LOADING ROM: main.bin [3282 bytes] [||||||||||||||||]</p>
+<p class="boot-text boot-text--amber">LOADING ROM: main.bin [3282 bytes] [||||||||||||||||]</p>
 <h1 class="sr-only" aria-hidden="false">OLD CASSETTE</h1>
 <span class="hero-title glitch-hover" aria-hidden="true">OLD CASSETTE</span>
 <div class="hero-meta">
-      THEM?!CTF 2026 | REV | 100 PTS<br/>
-      AUTHOR: SISUBENY | WRITEUP: OPTIMUS_PRIME
-    </div>
+       <p>THEM?!CTF 2026 | REV | 100 PTS</p>
+       <p>AUTHOR: SISUBENY | WRITEUP: OPTIMUS_PRIME</p>
+     </div>
 </header>
 <!-- TOC -->
 <nav class="toc reveal-on-scroll">
-<div style="color:var(--phosphor-amber);margin-bottom:10px;"><span aria-hidden="true">&gt; </span>ROOT_DIR / CONTENTS</div>
+<div class="toc-title"><span aria-hidden="true">&gt; </span>ROOT_DIR / CONTENTS</div>
 <ul>
 <li><a href="#bg">Background</a></li>
 <li><a href="#step1">01. Identifying the binary</a></li>
@@ -815,7 +842,7 @@ html[data-theme="light"] .toolbar-btn[href^="https://"] {
 <h2><span aria-hidden="true">&gt; </span>step_01 --identify</h2>
 <p>The first instinct is to run <code class="ic">file</code> (the Unix file-type command). It says <code class="ic">data</code>. Not helpful. Run <code class="ic">xxd</code> instead and look at the first two bytes:</p>
 <pre><code>$ xxd main.bin | head -1
-00000000: <span style="color:var(--phosphor-amber)">00e0</span> 1280 a6a6 a6a6 a6a6 a6a6 a6a6 a6a6  ................</code></pre>
+ 00000000: <span class="hex-amber">00e0</span> 1280 a6a6 a6a6 a6a6 a6a6 a6a6 a6a6  ................</code></pre>
 <p><code class="ic">00 E0</code> is the CHIP-8 opcode <code class="ic">CLS</code> — clear the screen. The bytes <code class="ic">12 80</code> immediately after it form a jump instruction to <code class="ic">0x280</code>. The flood of <code class="ic">0xA6</code> bytes starting at offset 4 is sprite data in memory, never executed as code.</p>
 <div class="deep-dive">
 <button aria-controls="dd-chip8" aria-expanded="false" class="dd-header" type="button"><span>[+] DEEP DIVE: What is CHIP-8?</span></button>
@@ -837,7 +864,7 @@ Cycle 26092  →  'THEM?'
 <p>Good — the ROM definitely draws the flag. Bad — zeroing the timer breaks the decryption. The PRNG advances during the delay loop; each delay iteration triggers one PRNG step. Skip the delay, and the PRNG state diverges from what it would be during actual execution, causing garbage output from character 6 onwards.</p>
 <!-- Emulator Widget -->
 <div class="widget">
-<div class="widget-title">CHIP-8 Live Emulator</div>
+<div class="widget-title">CHIP-8 Emulator Preview</div>
 <div class="emu-container">
 <div class="emu-screen">
 <canvas class="emu-canvas" height="320" id="emu-display" width="640"></canvas>
@@ -860,11 +887,11 @@ Cycle 26092  →  'THEM?'
 <div class="widget">
 <div class="widget-title">Memory Map</div>
 <div class="memmap">
-<div class="mem-segment" style="flex:1; background:var(--phosphor-amber-dim); border:1px solid var(--phosphor-amber)" title="0x200 — entry: CLS, jump to 0x280"></div>
-<div class="mem-segment" style="flex:2; background:rgba(255,51,51,0.3); border:1px solid var(--phosphor-red)" title="0x280 — outer loop: software-constructed 32-bit countdown"></div>
-<div class="mem-segment" style="flex:1; background:var(--phosphor-teal); opacity:0.5" title="0x2C0 — PRNG: Updates VA and VB"></div>
-<div class="mem-segment" style="flex:4; background:rgba(0,255,65,0.3); border:1px solid var(--phosphor-green)" title="0x400-0x7FF — Sprite Banks"></div>
-<div class="mem-segment" style="flex:3; background:rgba(150,0,255,0.3); border:1px solid #90f" title="0x900 — Draw Sequence: 32 blocks, one per character"></div>
+<div class="mem-segment mem-segment--entry" title="0x200 — entry: CLS, jump to 0x280"></div>
+ <div class="mem-segment mem-segment--outer-loop" title="0x280 — outer loop: software-constructed 32-bit countdown"></div>
+ <div class="mem-segment mem-segment--prng" title="0x2C0 — PRNG: Updates VA and VB"></div>
+ <div class="mem-segment mem-segment--sprite" title="0x400-0x7FF — Sprite Banks"></div>
+ <div class="mem-segment mem-segment--draw" title="0x900 — Draw Sequence: 32 blocks, one per character"></div>
 </div>
 </div>
 <p>The sprite data is split across 8 subtable banks in memory:</p>
@@ -891,17 +918,17 @@ Cycle 26092  →  'THEM?'
 <div class="widget-title">Interactive XOR Demo</div>
 <div class="xor-row">
 <label for="xor-pt">Plaintext:</label>
-<input id="xor-pt" max="255" min="0" type="range" value="166" aria-label="Plaintext value from 0 to 255"/>
+<input id="xor-pt" max="255" min="0" step="1" type="range" value="166" aria-label="Plaintext value from 0 to 255"/>
 <span class="xor-val" id="val-pt" aria-live="polite">A6</span>
 </div>
 <div class="xor-row">
 <label for="xor-va">VA:</label>
-<input id="xor-va" max="255" min="0" type="range" value="161" aria-label="VA register value from 0 to 255"/>
+<input id="xor-va" max="255" min="0" step="1" type="range" value="161" aria-label="VA register value from 0 to 255"/>
 <span class="xor-val" id="val-va" aria-live="polite">A1</span>
 </div>
 <div class="xor-row">
 <label for="xor-vb">VB:</label>
-<input id="xor-vb" max="255" min="0" type="range" value="178" aria-label="VB register value from 0 to 255"/>
+<input id="xor-vb" max="255" min="0" step="1" type="range" value="178" aria-label="VB register value from 0 to 255"/>
 <span class="xor-val" id="val-vb">B2</span>
 </div>
 <div class="xor-result text-center">
@@ -949,17 +976,17 @@ Cycle 26092  →  'THEM?'
 <div class="timer-panel">
 <div>Simulation (1.1 Trillion)</div>
 <div class="timer-value" id="timer-bf">0</div>
-<div class="progress-track"><div class="progress-fill" id="fill-bf" style="color:var(--phosphor-red)"></div></div>
-</div>
-<div class="timer-panel fast">
-<div>Mod 34</div>
-<div class="timer-value" id="timer-math">?</div>
-<div class="progress-track"><div class="progress-fill" id="fill-math" style="color:var(--phosphor-teal)"></div></div>
-</div>
-</div>
-<div class="text-center" style="margin-top:15px">
-<button class="btn" id="btn-race">RACE START</button>
-</div>
+<div class="progress-track"><div class="progress-fill progress-fill--red" id="fill-bf"></div></div>
+ </div>
+ <div class="timer-panel fast">
+ <div>Mod 34</div>
+ <div class="timer-value" id="timer-math">?</div>
+ <div class="progress-track"><div class="progress-fill progress-fill--teal" id="fill-math"></div></div>
+ </div>
+ </div>
+ <div class="text-center race-controls">
+ <button class="btn" id="btn-race">RACE START</button>
+ </div>
 </div>
 </section>
 <!-- STEP 6 -->
@@ -989,11 +1016,11 @@ def step_prng(mem, va, vb):
 <p>This matches the <code class="ic">CONSTS</code> table, the <code class="ic">mem[0x800 + vb]</code> lookup, and the 5-iteration bit-shuffle used in <code class="ic">solve.py</code>. Cycle properties are identical: 65,536 possible states, first repeat at step <strong>329</strong>, cycle length <strong>34</strong>.</p>
 <!-- PRNG Viz Widget -->
 <div class="widget">
-<div class="widget-title">Cycle Detector 256x256</div>
+<div class="widget-title">PRNG Cycle Preview</div>
 <div class="prng-grid"></div>
 <div class="prng-controls flex-between">
 <button class="btn" id="btn-prng-play">SEARCH &gt;&gt;</button>
-<span id="prng-step" style="color:var(--phosphor-teal)">STEP: 0</span>
+<span id="prng-step" class="prng-step-text">STEP: 0</span>
 </div>
 </div>
 </section>
@@ -1017,13 +1044,13 @@ for i in range(32):
 print("".join(flag))</code></pre>
 <div class="widget">
 <div class="widget-title">FLAG PAYLOAD</div>
-<div aria-label="Animated flag slots" class="flag-slots" data-flag-length="32"></div><div class="flag-copy-host" id="flag-copy-host"></div>
+<div aria-label="Animated flag slots" class="flag-slots"></div><div class="flag-copy-host" id="flag-copy-host"></div>
 <p class="flag-caption">OLD CASSETTE — THEM?!CTF 2026 REVERSE ENGINEERING CHALLENGE</p>
 </div>
 </section>
 <!-- LESSONS -->
-<section class="reveal-on-scroll" style="margin-top:60px">
-<h2><span aria-hidden="true">&gt; </span>cat takeaways.txt</h2>
+ <section class="reveal-on-scroll section--spaced">
+ <h2><span aria-hidden="true">&gt; </span>cat takeaways.txt</h2>
 <div class="deep-dive">
 <button aria-controls="dd-takeaway1" aria-expanded="false" class="dd-header" type="button"><span>[+] 01 — Read the bytes yourself</span></button>
 <div class="dd-content" id="dd-takeaway1">file(1) doesn't know CHIP-8. The first two bytes told the whole story. Always xxd before anything else.</div>
@@ -1038,26 +1065,25 @@ print("".join(flag))</code></pre>
 </div>
 </section>
 
-<!-- RESOURCES -->
-<section class="reveal-on-scroll" id="downloads" style="margin-top:60px">
-<h2>&gt; ls -lah downloads/</h2>
-<p>Everything needed to review, solve, and deploy the challenge is available below.</p>
-<div class="widget">
-<div class="widget-title">DOWNLOADS & LINKS</div>
-<div style="display:flex; flex-wrap:wrap; gap:10px;">
-<a class="toolbar-btn" href="./Old_Cassette_Writeup_.pdf" download>↓ PDF</a>
-<a class="toolbar-btn" href="./main.bin" download>↓ BIN</a>
-<a class="toolbar-btn" href="./solve.py" download>↓ SOLVER</a>
-<a class="toolbar-btn" href="https://ctf.themctf.com/challenges?categories=sanity%2Cmisc%2Crev%2Cpwn%2Cforensics%2Cweb%2Ccrypto%2Cosint%2Cweb3#Old%20Cassette-6" target="_blank" rel="noopener noreferrer">↗ CHALLENGE</a>
-</div>
-</div>
-</section>
+<section class="reveal-on-scroll section--spaced" id="downloads">
+ <h2>&gt; ls -lah downloads/</h2>
+ <p>Everything needed to review, solve, and deploy the challenge is available below.</p>
+ <div class="widget">
+ <div class="widget-title">DOWNLOADS & LINKS</div>
+ <div class="download-links">
+ <a class="toolbar-btn" href="./Old_Cassette_Writeup_.pdf" download>↓ PDF</a>
+ <a class="toolbar-btn" href="./main.bin" download>↓ BIN</a>
+ <a class="toolbar-btn" href="./solve.py" download>↓ SOLVER</a>
+ <a class="toolbar-btn" href="https://ctf.themctf.com/challenges?categories=sanity%2Cmisc%2Crev%2Cpwn%2Cforensics%2Cweb%2Ccrypto%2Cosint%2Cweb3#Old%20Cassette-6" target="_blank" rel="noopener noreferrer">↗ CHALLENGE</a>
+ </div>
+ </div>
+ </section>
 
 <!-- Footer -->
-<footer class="reveal-on-scroll" style="margin-top:60px; padding-top:20px; border-top:1px dashed var(--phosphor-green-dim); text-align:center;">
-<p>A trillion-step timer defeated by a 34-step cycle and one <code class="ic">% 34</code>.</p>
-<p>EOF. K7 out.</p>
-</footer>
+ <footer class="reveal-on-scroll section--spaced section--footer" aria-label="Page footer">
+ <p>A trillion-step timer defeated by a 34-step cycle and one <code class="ic">% 34</code>.</p>
+ <p>EOF. K7 out.</p>
+ </footer>
 </main>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -1076,21 +1102,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const value = window.localStorage.getItem(namespaced);
         return value === null ? fallback : value;
       } catch (err) {
-        if (typeof console !== 'undefined' && console.warn) {
-          console.warn('[Storage] Read error for key "' + key + '":', err);
-        }
         return fallback;
       }
     },
-    set(key, value) {
-      try {
-        const namespaced = STORAGE_PREFIX + key;
-        window.localStorage.setItem(namespaced, value);
-      } catch (err) {
-        if (typeof console !== 'undefined' && console.warn) {
-          console.warn('[Storage] Write error for key "' + key + '":', err);
-        }
-      }
+set(key, value) {
+       try {
+         const namespaced = STORAGE_PREFIX + key;
+         window.localStorage.setItem(namespaced, value);
+       } catch (err) {}
+     }
     }
   };
 
@@ -1108,13 +1128,14 @@ document.addEventListener('DOMContentLoaded', () => {
   function initProgressBar() {
     if (!progressBar) return;
     let ticking = false;
-    const update = () => {
-      const scrollTop = document.documentElement.scrollTop || document.body.scrollTop || 0;
-      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-      const scrolled = height > 0 ? (scrollTop / height) * 100 : 0;
-      progressBar.style.width = `${Math.min(100, Math.max(0, scrolled))}%`;
-      ticking = false;
-    };
+const update = () => {
+       const scrollTop = document.documentElement.scrollTop || document.body.scrollTop || 0;
+       const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+       const scrolled = height > 0 ? (scrollTop / height) * 100 : 0;
+       progressBar.style.width = `${Math.min(100, Math.max(0, scrolled))}%`;
+       progressBar.setAttribute('aria-valuenow', Math.round(scrolled).toString());
+       ticking = false;
+     };
     const onScroll = () => {
       if (!ticking) {
         requestAnimationFrame(update);
@@ -1171,8 +1192,8 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.className = 'copy-btn';
       btn.textContent = 'COPY';
 
-      btn.addEventListener('click', async () => {
-        const text = pre.innerText.replace(/\n+$/g, '');
+btn.addEventListener('click', async () => {
+         const text = pre.textContent.replace(/\n+$/g, '');
         try {
           await navigator.clipboard.writeText(text);
           btn.textContent = 'COPIED!';
@@ -1181,11 +1202,8 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.textContent = 'COPY';
             btn.classList.remove('is-copied');
           }, 1400);
-        } catch (err) {
-          if (typeof console !== 'undefined' && console.warn) {
-            console.warn('[Copy] Clipboard write failed:', err);
-          }
-          btn.textContent = 'FAILED';
+} catch (err) {
+           btn.textContent = 'FAILED';
           window.setTimeout(() => {
             btn.textContent = 'COPY';
           }, 1400);
@@ -1371,12 +1389,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const regVA = document.getElementById('reg-va');
     const regVB = document.getElementById('reg-vb');
 
-    if (!emuCanvas || !emuCtx || !btnPlay || !btnStep || !regVA || !regVB) {
-      if (typeof console !== 'undefined' && console.warn) {
-        console.warn('[Emulator] Widget initialization failed: missing required elements. Canvas rendering unavailable.');
-      }
-      return;
-    }
+if (!emuCanvas || !emuCtx || !btnPlay || !btnStep || !regVA || !regVB) {
+       return;
+     }
 
     const characters = ['', 'T', 'TH', 'THE', 'THEM', 'THEM?', 'WAITING...'];
     const vaVals = ['00', 'A1', '3F', '8C', '12', 'E4', '??'];
@@ -1591,7 +1606,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!flagContainer) return;
 
     const obfuscatedFlag = 'VEhFTT8hQ1RGezBMRF9UNFAzX04zVjNSX0QxRTVLN30=';
-    const decoded = atob(obfuscatedFlag);
+    let decoded;
+    try {
+      decoded = atob(obfuscatedFlag);
+    } catch (_) {
+      decoded = 'THEM?!CTF{0LD_T4P3_N3V3R_D1E5K7}';
+    }
     const finalFlag = decoded;
 
     flagContainer.innerHTML = '';
@@ -1691,7 +1711,14 @@ document.addEventListener('DOMContentLoaded', () => {
       sequence.push(event.key);
       if (sequence.length > 10) sequence.splice(0, sequence.length - 10);
       if (sequence.join(',') === konami) {
-        alert('HACKER MODE ACTIVATED: The pigeonhole principle is your friend.');
+        const banner = document.createElement('div');
+        banner.className = 'rabbit-hole';
+        banner.style.marginTop = '20px';
+        banner.style.padding = '15px';
+        banner.style.color = 'var(--phosphor-amber)';
+        banner.textContent = 'HACKER MODE ACTIVATED: The pigeonhole principle is your friend.';
+        document.body.appendChild(banner);
+        setTimeout(() => banner.remove(), 3000);
       }
     });
   }

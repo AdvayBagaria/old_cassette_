@@ -9,16 +9,18 @@ def create_clean_deployment(source_dir: str = ".", dest_dir: str = "dist") -> No
     source = Path(source_dir).resolve()
     dest = Path(dest_dir)
 
-    SAFE_PREFIXES = {
-        str(Path(source_dir).resolve()),
-        str(Path.cwd().resolve()),
-        str(Path.home().resolve()),
-    }
-    if not any(str(source).startswith(strip) for strip in SAFE_PREFIXES):
+    safe_prefixes = [
+        Path.cwd().resolve(),
+        Path.home().resolve(),
+    ]
+    source_resolved = source.resolve()
+    if source_resolved not in safe_prefixes and not any(source_resolved.is_relative_to(p) for p in safe_prefixes):
         raise ValueError("Source directory is outside the project tree.")
 
     dest_resolved = dest.resolve()
-    source_resolved = source.resolve()
+    if dest_resolved not in safe_prefixes and not any(dest_resolved.is_relative_to(p) for p in safe_prefixes):
+        raise ValueError("Destination directory is outside the project tree.")
+
     if dest_resolved == source_resolved or dest_resolved in source_resolved.parents:
         raise ValueError(
             f"Error: Destination directory '{dest_resolved}' cannot be the source "
@@ -27,6 +29,8 @@ def create_clean_deployment(source_dir: str = ".", dest_dir: str = "dist") -> No
 
     public_files = [
         "index.html",
+        "style.css",
+        "script.js",
         "main.bin",
         "solve.py",
         "Old_Cassette_Writeup_.pdf",
@@ -48,7 +52,10 @@ def create_clean_deployment(source_dir: str = ".", dest_dir: str = "dist") -> No
 
     if dest.exists():
         eprint("Cleaning old deployment directory:", dest)
-        shutil.rmtree(dest)
+        if dest.is_dir():
+            shutil.rmtree(dest)
+        else:
+            dest.unlink()
     dest.mkdir(parents=True, exist_ok=True)
 
     eprint("Creating clean deployment in", dest, "/")

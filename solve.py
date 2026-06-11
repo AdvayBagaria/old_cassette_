@@ -23,14 +23,12 @@ WALK_CYCLE_CAP = 0x10000
 
 
 def load_rom(path: Path) -> bytes:
+    if path.stat().st_size > MAX_ROM_SIZE:
+        raise ValueError(f"{path} is too large ({path.stat().st_size} bytes); "
+                         f"maximum CHIP-8 ROM size is {MAX_ROM_SIZE} bytes")
     data = path.read_bytes()
     if not data:
         raise ValueError(f"{path} is empty")
-    if len(data) > MAX_ROM_SIZE:
-        raise ValueError(
-            f"{path} is too large ({len(data)} bytes); "
-            f"maximum CHIP-8 ROM size is {MAX_ROM_SIZE} bytes"
-        )
     mem = bytearray(CHIP8_MEMORY_SIZE)
     mem[CHIP8_LOAD_OFFSET : CHIP8_LOAD_OFFSET + len(data)] = data
     return bytes(mem)

@@ -196,7 +196,7 @@ pre {
 .mem-info { border: 1px solid var(--phosphor-green-dim); padding: 15px; margin-top: 10px; min-height: 100px; }
 
 /* PRNG Visualizer */
-.prng-grid { transition: box-shadow 0.2s; }
+.prng-grid { width: 100%; aspect-ratio: 1; background: #050505; position: relative; border: 1px solid #222; }
 .prng-dot { position: absolute; width: 4px; height: 4px; background: rgba(0,255,65,0.5); transform: translate(-50%, -50%); border-radius: 50%; }
 .prng-dot.active { background: var(--phosphor-teal); box-shadow: 0 0 8px var(--phosphor-teal); z-index: 10; width: 8px; height: 8px; }
 .prng-dot.cycle { background: var(--phosphor-amber); box-shadow: var(--glow-amber); }
@@ -736,7 +736,7 @@ html[data-theme="light"] .toolbar-btn[href^="https://"] {
     margin-bottom: 18px !important;
   }
 
-  .all-sections, .dd-content, .rabbit-content { display: block !important; }
+  .dd-content, .rabbit-content { display: block !important; }
 
 
   .container {
@@ -1109,6 +1109,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   function initProgressBar() {
+    if (!progressBar) return;
     let ticking = false;
     const update = () => {
       const scrollTop = document.documentElement.scrollTop || document.body.scrollTop || 0;
@@ -1630,6 +1631,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const revealSlots = flagContainer.querySelectorAll('.flag-slot');
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     const reducedMotion = motionQuery.matches;
+    let revealed = false;
 
     const reveal = () => {
       if (revealed) return;

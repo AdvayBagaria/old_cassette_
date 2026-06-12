@@ -4,7 +4,7 @@ from __future__ import annotations
 """Solve helper for the Old Cassette CHIP-8 challenge.
 
 Usage:
-    python3 solve.py [path/to/main.bin]
+    python3 prng_verify.py [path/to/main.bin]
 
 This script verifies the PRNG orbit used by the ROM and prints the
 cycle start/length that collapses exponential timing into modular arithmetic.

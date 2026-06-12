@@ -32,10 +32,11 @@ def create_clean_deployment(source_dir: str = ".", dest_dir: str = "dist") -> No
         "style.css",
         "script.js",
         "main.bin",
-        "solve.py",
+        "prng_verify.py",
         "Old_Cassette_Writeup_.pdf",
         "README.md",
         ".nojekyll",
+        "og-image.png",
     ]
     public_dirs = [
         ".github/workflows",
